@@ -1,43 +1,70 @@
 const express = require('express');
-let books = require("./booksdb.js");
-let isValid = require("./auth_users.js").isValid;
-let users = require("./auth_users.js").users;
-const public_users = express.Router();
+let booksStorage = require("./booksdb.js");
+let usersStorage = require("./auth_users.js").usersStorage;
+const { BadRequestError, AlreadyExistsError, NotFoundError } = require('../utils/errors.js');
+const errorHandler = require('../utils/error_handler.js');
+const { hashPassword } = require('../utils/password.js');
 
 
-public_users.post("/register", (req,res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
-});
+async function searchInBooks(res, query, fieldGetter) {
+  const books = await booksStorage.searchInBooks(query, fieldGetter);
+  if (books.length === 0) {
+    throw new NotFoundError('Book not found');
+  }
 
-// Get the book list available in the shop
-public_users.get('/',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
-});
+  return res.status(200).json({ data: books });
+}
 
-// Get book details based on ISBN
-public_users.get('/isbn/:isbn',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
- });
-  
-// Get book details based on author
-public_users.get('/author/:author',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
-});
+async function findByIBSN(req, res, resWrapper) {
+  const book = await booksStorage.findByISBN(req.params.isbn);
+  if (!book) {
+    throw new NotFoundError('Book not found');
+  }
 
-// Get all books based on title
-public_users.get('/title/:title',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
-});
+  return res.status(200).json({ data: resWrapper(book) });
+}
 
-//  Get book review
-public_users.get('/review/:isbn',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
-});
+async function register(req, res) {
+  const { username, password } = req.body;
+  if (username && password) {
+    if (usersStorage[username]) {
+      throw new AlreadyExistsError('User already exists');
+    }
 
-module.exports.general = public_users;
+    usersStorage[username] = { password: await hashPassword(password), username };
+    return res.status(200).json({ message: "User registered successfully" });
+  }
+
+  throw new BadRequestError();
+}
+
+
+module.exports.general = express.Router()
+  .post("/register", errorHandler(register))
+
+  // Get the book list available in the shop
+  .get('/', errorHandler(
+    async (req, res) => {
+      return res.status(300).json({ data: await booksStorage.loadAll() });
+    }
+  ))
+
+  // Get book details based on ISBN
+  .get('/isbn/:isbn', errorHandler(
+    (req, res) => findByIBSN(req, res, book => book)
+  ))
+
+  // Get book details based on author
+  .get('/author/:author', errorHandler(
+    (req, res) => searchInBooks(res, req.params.author, book => book.author)
+  ))
+
+
+  .get('/title/:title', errorHandler(
+    (req, res) => searchInBooks(res, req.params.title, book => book.title)
+  ))
+
+  //  Get book review
+  .get('/review/:isbn', errorHandler(
+    (req, res) => findByIBSN(req, res, book => book.reviews)
+  ));
