@@ -29,7 +29,7 @@ class BooksStorage {
   };
 
   async loadAll() {
-    return new Promise((resolve) => resolve(Object.values(this.#data)));
+    return new Promise((resolve) => resolve(this.#data));
   }
 
   async findByISBN(isbn) {
@@ -60,20 +60,6 @@ class BooksStorage {
       resolve(books);
     });
   }
-  // resolve(
-  //   // Object.values(this.#data).filter(book => {
-  //   //       const words = (query.match(/\w+/g) || []).map(w => w.toLocaleLowerCase());
-  //   //       return words.every(word => fieldGetter(book).toLocaleLowerCase().includes(word));
-  //   // }))
-  //   Object.entries(this.#data).filter((book) => {
-  //     const words = (query.match(/\w+/g) || []).map((w) =>
-  //       w.toLocaleLowerCase()
-  //     );
-  //     return false;
-  //   })
-  // )
-  //     );
-  //   }
 
   async bookExist(isbn) {
     return new Promise((resolve) => resolve(!!this.#data[isbn]));
