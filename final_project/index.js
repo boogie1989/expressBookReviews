@@ -4,7 +4,7 @@ const { customerRouter } = require("./router/auth_users.js");
 const { generalRouter } = require("./router/general.js");
 const { UnauthorizedError } = require("./utils/errors.js");
 const { errorHandler } = require("./utils/error_handler.js");
-const PORT = 5001;
+const PORT = 5000;
 
 module.exports.app = express()
   .use(express.json())
